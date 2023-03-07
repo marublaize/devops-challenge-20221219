@@ -1,0 +1,49 @@
+version: 2.1
+
+# Define environment variables
+environment:
+  BUCKET_NAME: devops-challenge-20221219
+  
+# Define pipeline jobs
+jobs:
+  build:
+    docker:
+      - image: node:14
+    steps:
+      - checkout
+      - run: npm install
+      - run: npm run build
+      - save_cache:
+          key: v1-dependencies-{{ checksum "package-lock.json" }}
+          paths:
+            - node_modules
+      - save_cache:
+          key: v1-build-{{ checksum "package-lock.json" }}
+          paths:
+            - dist
+  deploy:
+    docker:
+      - image: circleci/aws-cli:1.20.59
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Deploy to S3
+          command: |
+            aws s3 sync dist/ s3://${BUCKET_NAME}/
+            aws s3 cp index.html s3://${BUCKET_NAME}/
+            aws s3 cp error.html s3://${BUCKET_NAME}/
+            aws s3 website s3://${BUCKET_NAME}/ --index-document index.html --error-document error.html
+
+# Define pipeline workflow
+workflows:
+  version: 2
+  build-and-deploy:
+    jobs:
+      - build
+      - deploy:
+          requires:
+            - build
+          filters:
+            branches:
+              only: main
