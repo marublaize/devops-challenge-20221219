@@ -23,7 +23,7 @@ jobs:
       #       - dist
   deploy:
     docker:
-      - image: circleci/aws-cli:1.20.59
+      - image: cimg/aws:2023.01
     steps:
       - attach_workspace:
           at: .
